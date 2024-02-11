@@ -28,10 +28,13 @@ int main() {
 
 	// define client socket 
 	int client_socket;
-	client_socket = accept(server_socket, NULL, NULL);
 
-	// send data to the specified client 
-	send(client_socket, server_message, sizeof(server_message), 0);
+	while(1) {
+		client_socket = accept(server_socket, NULL, NULL);
+
+		// send data to the specified client 
+		send(client_socket, server_message, sizeof(server_message), 0);
+	}
 
 	close(server_socket);
 	return 0;
