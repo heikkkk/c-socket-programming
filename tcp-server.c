@@ -80,6 +80,9 @@ void server_calculator(int connection_fd) {
 int main() {
 
 	//TODO PROPER CLOSING, REUSE SAME PORT WITHOUT KILLLING PROCESS FROM TERMINAL	
+	//TODO MULTIPLE CLIENT CONNECTIONS USING THREADS
+	
+
 	// create the server socket 
 	int server_socket, client_socket, length, option = 1;
 	struct sockaddr_in server_address, client_address;
