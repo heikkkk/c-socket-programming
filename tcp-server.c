@@ -5,12 +5,109 @@
 #include <netdb.h>
 #include <strings.h>
 
+#include <pthread.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
 
+#include "threadqueue.h"
+
 #define PORT 8080
+#define SERVER_BACKLOG 100
+#define THREAD_POOL_SIZE 5
+
+pthread_t thread_pool[THREAD_POOL_SIZE];
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void * server_calculator(void* p_connection_fd);
+int eval_expression(char* expression);
+void * thread_function(void *arg);
+
+int main() {
+
+	//TODO PROPER CLOSING, REUSE SAME PORT WITHOUT KILLLING PROCESS FROM TERMINAL	
+	//TODO MULTIPLE CLIENT CONNECTIONS USING THREADS
+	
+
+	// create the server socket 
+	int server_socket, client_socket, length, option = 1;
+	struct sockaddr_in server_address, client_address;
+
+	// initialize thread pool 
+	for (int i = 0; i < THREAD_POOL_SIZE; i++) {
+		pthread_create(&thread_pool[i], NULL, thread_function, NULL);
+	}
+	
+	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (server_socket == -1) {
+		perror("socket creation failed..\n");
+		exit(EXIT_FAILURE);
+	} else {
+		printf("socket created..\n");
+	}
+	setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+
+	bzero(&server_address, sizeof(server_address));
+	// define the server address
+	server_address.sin_family = AF_INET;
+	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_address.sin_port = htons(PORT);
+
+	// bind the socket to the specified IP and port 
+	if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)))
+			!= 0) {
+		perror("socket bind failed\n");
+		exit(EXIT_FAILURE);
+	} else {
+		printf("socket binded..\n");
+	}
+
+	// listen for connections. 5 specifies the total number of allowed connections at a time
+	if (listen(server_socket, SERVER_BACKLOG) != 0) {
+		perror("listen failds..\n");
+		exit(EXIT_FAILURE);
+	} else {  
+		printf("server listening..\n");
+	}
+
+	while (1) {
+			
+		// define client socket 
+		length = sizeof(client_address);
+		client_socket = accept(server_socket, 
+				(struct sockaddr*)&client_address, (socklen_t*)&length);
+		if (client_socket < 0) {
+			perror("server accept failed..\n");
+			exit(EXIT_FAILURE);
+		} else {
+			printf("server accepted the client\n");
+		}
+
+		
+
+		int *pclient = malloc(sizeof(int));
+		*pclient = client_socket;
+		pthread_mutex_lock(&mutex);
+		enqueue(pclient);
+		pthread_mutex_unlock(&mutex);
+	}
+	close(server_socket);
+	return 0;
+}
+
+void * thread_function(void *arg) {
+	while (1) {
+		pthread_mutex_lock(&mutex);
+		int *pclient = dequeue();
+		pthread_mutex_unlock(&mutex);
+
+		if (pclient != NULL) {
+			server_calculator(pclient);
+		}
+	}
+}
 
 int eval_expression(char* expression) {
 	printf("\nentred expression eval\n");
@@ -48,8 +145,10 @@ int eval_expression(char* expression) {
 	return 0;	
 }
 
-void server_calculator(int connection_fd) {
-	printf("entred calculator\n");
+void * server_calculator(void* p_connection_fd) {
+	int connection_fd = *((int*)p_connection_fd);
+	free(p_connection_fd);
+
 	char buffer[256];
 	
 	for(;;)
@@ -75,65 +174,5 @@ void server_calculator(int connection_fd) {
 			break;
 		}
 	}
-}
-
-int main() {
-
-	//TODO PROPER CLOSING, REUSE SAME PORT WITHOUT KILLLING PROCESS FROM TERMINAL	
-	//TODO MULTIPLE CLIENT CONNECTIONS USING THREADS
-	
-
-	// create the server socket 
-	int server_socket, client_socket, length, option = 1;
-	struct sockaddr_in server_address, client_address;
-	
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_socket == -1) {
-		perror("socket creation failed..\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("socket created..\n");
-	}
-	setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-
-	bzero(&server_address, sizeof(server_address));
-	// define the server address
-	server_address.sin_family = AF_INET;
-	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_address.sin_port = htons(PORT);
-
-	// bind the socket to the specified IP and port 
-	if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)))
-			!= 0) {
-		perror("socket bind failed\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("socket binded..\n");
-	}
-
-	// listen for connections. 5 specifies the total number of allowed connections at a time
-	if (listen(server_socket, 5) != 0) {
-		perror("listen failds..\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("server listening..\n");
-	}
-	length = sizeof(client_address);
-	
-	// define client socket 
-	
-	client_socket = accept(
-		server_socket, (struct sockaddr*)&client_address, &length);
-	if (client_socket < 0) {
-		perror("server accept failed..\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("server accept the client\n");
-	}
-	
-	server_calculator(client_socket);
-	printf("exited calculator. closing...\n");
-
-	close(server_socket);
-	return 0;
+	return NULL;
 }
