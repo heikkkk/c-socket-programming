@@ -28,8 +28,6 @@ void * thread_function(void *arg);
 int main() {
 
 	//TODO PROPER CLOSING, REUSE SAME PORT WITHOUT KILLLING PROCESS FROM TERMINAL	
-	//TODO MULTIPLE CLIENT CONNECTIONS USING THREADS
-	
 
 	// create the server socket 
 	int server_socket, client_socket, length, option = 1;
