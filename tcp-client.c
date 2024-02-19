@@ -9,7 +9,7 @@
 
 #include <netinet/in.h>
 
-#define PORT 8080
+#define PORT 9002
 
 void server_calculator(int connection_fd) {
 	char buffer[256];
