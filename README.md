@@ -1,3 +1,3 @@
 # c-socket-programming
-Unsecure reading from user i would assume. 
-Also no validation to check if user input is of the correct format. probably not a big deal...
+Be wary of reading from the client.
+
