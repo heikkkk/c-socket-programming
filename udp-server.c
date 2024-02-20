@@ -10,7 +10,6 @@
 #include <netinet/in.h>
 
 #define PORT 9002
-#define SERVER_BACKLOG 100
 #define BUFFER_SIZE 256
 
 void * check(int sockfd, char* err_origin);
@@ -38,15 +37,25 @@ int main() {
         "socket bind"
     );
 
-    int n;
-    n = recvfrom(server_sockfd, buffer, BUFFER_SIZE, MSG_WAITALL, 
-        (struct sockaddr*)&client_address, &cli_addr_len);
-    
-    buffer[n] = '\0';
-    printf("Client : %s\n", buffer);
-    sendto(server_sockfd, buffer, BUFFER_SIZE, MSG_CONFIRM,
-        (stuct sockaddr*)&client_address, &cli_addr_len);
-    
+    while(1) {
+        int n;
+        n = recvfrom(server_sockfd, buffer, BUFFER_SIZE, MSG_WAITALL, 
+            (struct sockaddr*)&client_address, &cli_addr_len);
+        
+        buffer[n] = '\0';
+        if (strcmp(buffer, "exit") == 0) {
+            break;
+        }
+
+        int expr_val = eval_expression(buffer); 
+        printf("Client : %s\n", buffer);
+        printf("Server: %d\n", expr_val);
+        
+        sendto(server_sockfd, buffer, BUFFER_SIZE, MSG_CONFIRM,
+            (stuct sockaddr*)&client_address, &cli_addr_len);
+    }
+    printf("closing server..\n");
+    close(server_sockfd);
     return 0;
 }
 
@@ -60,4 +69,35 @@ void * check(int sockfd, char* err_origin) {
     }
     printf("%s", err_origin);
     return NULL;
+}
+
+int eval_expression(char* expression) {
+	size_t length = strlen(expression);
+	int num1 = 0, num2 = 0;
+	char operator;
+
+	int i = 0;
+	// get first number of the expression 
+	while (expression[i] != '\0') {
+		if (expression[i] == '+' || expression[i] == '-') {
+			operator = expression[i];
+			i++;
+			break;
+		}
+		num1 = num1 * 10 + (expression[i] - '0');
+		i++;
+	}
+	printf("num 1: %d\n", num1);
+
+	printf("operator: %c\n", operator);
+	printf("num2: %d\n", num2);
+	// get second number of the expression 
+	while (expression[i] != '\n') {
+		num2 = num2 * 10 + (expression[i] - '0');
+		i++;
+	}
+	
+	if (operator == '+') return num1 + num2;
+	if (operator == '-') return num1 - num2;
+	return 0;	
 }
